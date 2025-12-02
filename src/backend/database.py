@@ -12,7 +12,7 @@ import os
 # 설정
 ##################################################
 # database.db 파일 경로 지정
-DATABASE_URL = "sqlite:////home/db/database.db"
+DATABASE_URL = "sqlite:///./database.db"
 
 # 데이터베이스 엔진 생성
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

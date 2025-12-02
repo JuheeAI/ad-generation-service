@@ -1,0 +1,58 @@
+{
+  "white_default": {
+    "name": "화이트(기본)",
+    "background_prompt": "clean professional studio lighting, white infinity cove background, 8k resolution, product photography",
+    "main_prompt_hint": "minimalist, high key lighting, commercial photography",
+    "placement_hint": "center",
+    "controlnet_scale": 0.4,
+    "ip_adapter_scale": 0.6
+  },
+  "store_indoor": {
+    "name": "매장 내부",
+    "background_prompt": "blurred modern retail store interior background, shelves with products, warm ambient lighting, depth of field",
+    "main_prompt_hint": "in a shop setting, retail atmosphere",
+    "placement_hint": "on a display shelf",
+    "controlnet_scale": 0.5,
+    "ip_adapter_scale": 0.5
+  },
+  "outdoor_nature": {
+    "name": "야외 풍경",
+    "background_prompt": "beautiful outdoor nature scenery, sunlight, trees and grass, natural lighting, bokeh background",
+    "main_prompt_hint": "nature sunlight, outdoor vibes",
+    "placement_hint": "on a natural surface",
+    "controlnet_scale": 0.45,
+    "ip_adapter_scale": 0.55
+  },
+  "cafe_mood": {
+    "name": "카페 분위기",
+    "background_prompt": "cozy cafe table, wooden texture, warm latte art atmosphere, window light, afternoon vibe",
+    "main_prompt_hint": "cafe lifestyle, cozy atmosphere",
+    "placement_hint": "on a wooden table",
+    "controlnet_scale": 0.5,
+    "ip_adapter_scale": 0.5
+  },
+  "luxury_mood": {
+    "name": "고급스러운 배경",
+    "background_prompt": "luxury marble texture background, gold accents, premium lighting, elegant atmosphere",
+    "main_prompt_hint": "premium, expensive look, elegant",
+    "placement_hint": "on a marble surface",
+    "controlnet_scale": 0.4,
+    "ip_adapter_scale": 0.6
+  },
+  "bright_mood": {
+    "name": "밝고 화사한 배경",
+    "background_prompt": "bright pastel colored background, soft studio lighting, cheerful atmosphere, high key",
+    "main_prompt_hint": "vibrant, colorful, energetic",
+    "placement_hint": "center",
+    "controlnet_scale": 0.45,
+    "ip_adapter_scale": 0.6
+  },
+  "simple_color": {
+    "name": "심플 단색 배경",
+    "background_prompt": "solid color background, minimal studio lighting, matte texture, no distractions",
+    "main_prompt_hint": "minimalism, solid color",
+    "placement_hint": "center",
+    "controlnet_scale": 0.4,
+    "ip_adapter_scale": 0.7
+  }
+}

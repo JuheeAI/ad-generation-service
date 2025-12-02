@@ -1,8 +1,12 @@
+import os
 import requests
 import streamlit as st
+os.environ["NO_PROXY"] = "localhost,127.0.0.1"
+
 from typing import Any, Dict, List, Optional, Tuple
 
-API_BASE = st.secrets["API_BASE"]
+API_BASE = "http://127.0.0.1:9000"
+print(f"\n🔥 [DEBUG] 현재 API_BASE 주소: {API_BASE}\n")
 TIMEOUT = 20
 
 def _auth_headers() -> dict:

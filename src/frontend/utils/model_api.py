@@ -1,8 +1,10 @@
 import requests
 import streamlit as st
+import os
 from typing import Dict, Any, Optional, Tuple
 
-MODEL_API_BASE = st.secrets["MODEL_API_BASE"].rstrip("/")
+os.environ["NO_PROXY"] = "localhost,127.0.0.1"
+BACKEND_URL = "http://127.0.0.1:9000"
 
 def generate_text(
     product: str,
@@ -24,7 +26,7 @@ def generate_text(
     Returns:
         str: 생성된 텍스트(양 끝 공백 제거)
     """
-    url = f"{MODEL_API_BASE}/infer/text"
+    url = f"{BACKEND_URL}/generations/text/create"
     payload = {
         "product": product,
         "tone": tone,
@@ -75,7 +77,7 @@ def generate_insta_image(
             image_bytes: 생성된 PNG 바이너리 (없으면 None)
             meta: 이미지 원본 키들을 제외한 나머지 메타 정보
     """
-    url = f"{MODEL_API_BASE}/infer/image"
+    url = f"{BACKEND_URL}/generations/image/create"
 
     # model_image가 없으면 키 자체를 빼주는 게 안전
     payload = {

@@ -7,7 +7,7 @@ from __future__ import annotations
 import os, re, json, time
 from typing import Optional, Dict
 import torch
-import config
+from ..core import config
 
 _HAS_OPENAI = True
 try: from openai import OpenAI

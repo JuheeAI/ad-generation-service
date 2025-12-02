@@ -1,49 +1,44 @@
-# src/backend/main.py
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from .database import create_db_and_tables
-from .routers import generations, user_models, auth
-import uvicorn
+from .routers import auth, generations, user_models
+from .services.image_engine import ImageGenerationPipeline
+from .core import config
+import logging
 
+logger = logging.getLogger("uvicorn")
+image_pipeline = None
 
-"""
-FastAPI 애플리케이션의 메인 실행 파일(Entrypoint)입니다.
-FastAPI 앱을 초기화하고, CORS 미들웨어를 설정하며,
-각 기능별로 분리된 API 라우터들을 앱에 포함시키는 역할을 합니다.
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global image_pipeline
+    logger.info("🚀 Server Start: Loading Models on RTX A6000...")
+    create_db_and_tables()
+    try:
+        image_pipeline = ImageGenerationPipeline(config=config, logger=logger)
+        app.state.image_pipeline = image_pipeline
+        logger.info("✅ Models Loaded Successfully!")
+    except Exception as e:
+        logger.error(f"❌ Model Load Failed: {e}")
+    yield
+    if image_pipeline:
+        image_pipeline.model_manager.unload()
 
-실행 명령어: uvicorn src.backend.main:app --reload --port 9000 --host 0.0.0.0
-"""
+app = FastAPI(title="AdGen Monolith API", lifespan=lifespan)
 
+# 정적 파일 마운트 (이미지 서빙용)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-##################################################
-# 앱 설정 및 초기화
-##################################################
-app = FastAPI(title="Backend Server")
-
-
-##################################################
-# 시작 이벤트 -> Alembic으로 관리하여 주석 처리함
-##################################################
-# 서버 시작 시 DB와 테이블을 생성
-# @app.on_event("startup")
-# def on_startup():
-#     create_db_and_tables()
-
-
-##################################################
-# 라우터 설정
-##################################################
-# routers 폴더에 정의된 각 API 라우터를 메인 앱에 포함
 app.include_router(auth.router)
 app.include_router(generations.router)
 app.include_router(user_models.router)
 
-
-##################################################
-# 루트 엔드포인트
-##################################################
 @app.get("/")
-def read_root():
-    """
-    서버가 정상적으로 실행 중인지 확인하기 위한 Health Check용 API.
-    """
-    return {"status": "Backend server is running"}
+def health_check():
+    return {"status": "ready" if image_pipeline else "loading"}
+
+def get_image_pipeline():
+    if not image_pipeline:
+        raise RuntimeError("Models are still loading...")
+    return image_pipeline

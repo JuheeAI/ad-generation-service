@@ -1,17 +1,15 @@
 import os
 from openai import OpenAI
-from dotenv import load_dotenv
-from fastapi import FastAPI
-from pydantic import BaseModel
+from ..core import config  # config에서 API KEY 가져오기
 
 # ==============================
 #  OpenAI 클라이언트 설정
 # ==============================
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# 환경변수 로드(dotenv)는 main.py나 config.py에서 처리되므로 여기선 불필요
+if not config.OPENAI_API_KEY:
+    print("Warning: OPENAI_API_KEY is missing in config.")
 
-# FastAPI 앱 생성
-app = FastAPI()
+client = OpenAI(api_key=config.OPENAI_API_KEY)
 
 # ==============================
 #  카테고리 정의 & 해시태그 템플릿
@@ -50,125 +48,6 @@ CATEGORY_TAGS = {
     "서비스_부동산": ["#부동산", "#자산관리", "#매매", "#아파트", "#원룸", "#투룸"],
     "서비스_인테리어": ["#인테리어", "#리모델링", "#집꾸미기"],
 }
-
-# ==============================
-#  카테고리 추론 함수
-# ==============================
-def infer_category(product_desc: str) -> str:
-    """
-    모델에게 상품 설명/상품명을 보고 업종 카테고리를 추론하도록 요청.
-    CATEGORY_TAGS 내에 있으면 해당 키 반환,
-    없으면 '기타' 반환.
-    """
-    prompt = f"""
-    상품 설명: {product_desc}
-    아래 업종 카테고리 중 하나를 가장 적합하게 선택하세요.
-    만약 어느 것에도 해당하지 않으면 "기타"라고 출력하세요.
-
-    가능한 카테고리:
-    {", ".join(CATEGORY_TAGS.keys())}
-
-    출력 형식: 카테고리명만 단독 출력
-    """
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0
-    )
-    return response.choices[0].message.content.strip()
-
-# ==============================
-#  키워드 추출 함수
-# ==============================
-def extract_keywords_from_product(product_desc: str, max_keywords: int = 5):
-    prompt = f"""
-    아래 상품 설명에서 광고용 해시태그로 쓸 수 있는 핵심 키워드 {max_keywords}개를
-    선택해 쉼표로 구분하여 출력하세요.
-    - 단어만 출력, '#'는 붙이지 마세요.
-    - 숫자, 이벤트, 브랜드명 등 광고에 중요한 키워드는 포함 가능.
-
-    상품 설명: {product_desc}
-    """
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0
-    )
-    keywords_str = response.choices[0].message.content.strip()
-    return [kw.strip() for kw in keywords_str.split(",") if kw.strip()]
-
-# ==============================
-#  해시태그 생성 함수
-# ==============================
-def generate_hashtags(location: str, category: str, product_desc: str):
-    hashtags = set()
-
-    # 대표 키워드 (기타일 경우는 공백 처리)
-    if category in CATEGORY_TAGS:
-        rep_keyword = CATEGORY_TAGS[category][0].lstrip("#")
-    else:
-        rep_keyword = ""
-
-    # 1. 카테고리 기본 태그
-    if category in CATEGORY_TAGS:
-        hashtags.update(CATEGORY_TAGS[category])
-    elif category == "기타":
-        # 카테고리가 기타일 경우 모델이 직접 해시태그 생성
-        prompt = f"""
-        상품 설명: {product_desc}
-        업종 카테고리가 사전에 없습니다.
-        이 상품/서비스를 홍보하기에 적합한 해시태그 5~8개를 제안해주세요.
-        일반적인 홍보용 (#추천, #인기 등)과 업종 관련 키워드를 섞어주세요.
-
-        출력 형식: 해시태그만 공백으로 구분하여 나열
-        """
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-        extra_tags = response.choices[0].message.content.strip().split()
-        hashtags.update(extra_tags)
-
-    # 2. 지역 기반 태그
-    if location:
-        parts = location.split()
-        last = parts[-1]  # 항상 읍/면/동
-        first = parts[0]  # 시/도 or 특별시/광역시
-
-        special_cities = [
-            "서울특별시", "세종특별자치시", "광주광역시", "부산광역시",
-            "대구광역시", "대전광역시", "울산광역시", "인천광역시", "제주특별자치도"
-        ]
-
-        def remove_last_char(name: str) -> str:
-            """끝 글자가 시/군/구이면 제거"""
-            if name[-1] in ["시", "군", "면", "읍"]:
-                return name[:-1]
-            return name
-
-        if rep_keyword:  # 카테고리에 맞는 대표 키워드가 있을 때만 지역+업종 태그 생성
-            if first in special_cities:
-                # "서울특별시" -> "서울", "제주특별자치도" -> "제주"
-                hashtags.add(f"#{first.replace('특별시','').replace('광역시','').replace('특별자치시','').replace('특별자치도','')}{rep_keyword}")
-                hashtags.add(f"#{remove_last_char(parts[1])}{rep_keyword}")   # "강남구" -> "강남구", "서귀포시" -> "서귀포"
-                hashtags.add(f"#{remove_last_char(parts[-1])}{rep_keyword}")  # "청담동" -> "청담동", "애월읍" -> "애월"
-            else:
-                hashtags.add(f"#{remove_last_char(parts[1])}{rep_keyword}")   # "용인시" -> "용인"
-                hashtags.add(f"#{remove_last_char(parts[-1])}{rep_keyword}")  # "죽전동" -> "죽전동", "백암면" -> "백암"
-        else:
-            # 대표 키워드가 없으면 지역명 단독 태그만 생성
-            hashtags.add(f"#{remove_last_char(parts[1])}")
-            hashtags.add(f"#{remove_last_char(parts[-1])}")
-
-    # 3. 상품 설명 기반 핵심 키워드
-    if category in CATEGORY_TAGS:  # 카테고리가 사전에 있을 때만 키워드 추출 적용
-        keywords = extract_keywords_from_product(product_desc)
-        for kw in keywords:
-            hashtags.add(f"#{kw}")
-
-    return list(hashtags)[:8]
-
 
 CHANNEL_PROMPTS = {
     "instagram": """
@@ -211,11 +90,111 @@ TONE_PROMPTS = {
     """
 }
 
+# ==============================
+#  Helper Functions
+# ==============================
+def infer_category(product_desc: str) -> str:
+    prompt = f"""
+    상품 설명: {product_desc}
+    아래 업종 카테고리 중 하나를 가장 적합하게 선택하세요.
+    만약 어느 것에도 해당하지 않으면 "기타"라고 출력하세요.
+
+    가능한 카테고리:
+    {", ".join(CATEGORY_TAGS.keys())}
+
+    출력 형식: 카테고리명만 단독 출력
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    return response.choices[0].message.content.strip()
+
+def extract_keywords_from_product(product_desc: str, max_keywords: int = 5):
+    prompt = f"""
+    아래 상품 설명에서 광고용 해시태그로 쓸 수 있는 핵심 키워드 {max_keywords}개를
+    선택해 쉼표로 구분하여 출력하세요.
+    - 단어만 출력, '#'는 붙이지 마세요.
+    - 숫자, 이벤트, 브랜드명 등 광고에 중요한 키워드는 포함 가능.
+
+    상품 설명: {product_desc}
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    keywords_str = response.choices[0].message.content.strip()
+    return [kw.strip() for kw in keywords_str.split(",") if kw.strip()]
+
+def generate_hashtags(location: str, category: str, product_desc: str):
+    hashtags = set()
+
+    # 대표 키워드
+    if category in CATEGORY_TAGS:
+        rep_keyword = CATEGORY_TAGS[category][0].lstrip("#")
+    else:
+        rep_keyword = ""
+
+    # 1. 카테고리 기본 태그
+    if category in CATEGORY_TAGS:
+        hashtags.update(CATEGORY_TAGS[category])
+    elif category == "기타":
+        prompt = f"""
+        상품 설명: {product_desc}
+        업종 카테고리가 사전에 없습니다.
+        이 상품/서비스를 홍보하기에 적합한 해시태그 5~8개를 제안해주세요.
+        출력 형식: 해시태그만 공백으로 구분하여 나열
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        extra_tags = response.choices[0].message.content.strip().split()
+        hashtags.update(extra_tags)
+
+    # 2. 지역 기반 태그
+    if location:
+        parts = location.split()
+        first = parts[0]  # 시/도
+
+        special_cities = [
+            "서울특별시", "세종특별자치시", "광주광역시", "부산광역시",
+            "대구광역시", "대전광역시", "울산광역시", "인천광역시", "제주특별자치도"
+        ]
+
+        def remove_last_char(name: str) -> str:
+            if name[-1] in ["시", "군", "면", "읍"]:
+                return name[:-1]
+            return name
+
+        if rep_keyword:
+            if first in special_cities:
+                hashtags.add(f"#{first.replace('특별시','').replace('광역시','').replace('특별자치시','').replace('특별자치도','')}{rep_keyword}")
+                if len(parts) > 1: hashtags.add(f"#{remove_last_char(parts[1])}{rep_keyword}")
+                if len(parts) > 2: hashtags.add(f"#{remove_last_char(parts[-1])}{rep_keyword}")
+            else:
+                if len(parts) > 1: hashtags.add(f"#{remove_last_char(parts[1])}{rep_keyword}")
+                if len(parts) > 2: hashtags.add(f"#{remove_last_char(parts[-1])}{rep_keyword}")
+        else:
+            if len(parts) > 1: hashtags.add(f"#{remove_last_char(parts[1])}")
+            if len(parts) > 2: hashtags.add(f"#{remove_last_char(parts[-1])}")
+
+    # 3. 상품 설명 기반 핵심 키워드
+    if category in CATEGORY_TAGS:
+        keywords = extract_keywords_from_product(product_desc)
+        for kw in keywords:
+            hashtags.add(f"#{kw}")
+
+    return list(hashtags)[:8]
+
 
 # ==============================
-#  광고 콘텐츠 생성 함수
+#  광고 콘텐츠 생성 함수 (메인 로직)
 # ==============================
-def generate_ad_content(
+def generate_ad_content_logic(
     product_desc: str,
     tone: str = "친근한",
     channel: str = "instagram",
@@ -223,6 +202,10 @@ def generate_ad_content(
     translate_en: bool = False,
     location: str = None
 ):
+    """
+    백엔드 라우터에서 호출하는 메인 함수입니다.
+    """
+    # 헬퍼 함수들 호출 (같은 파일 내에 있으므로 직접 호출)
     category = infer_category(product_desc)
     hashtags = generate_hashtags(location, category, product_desc)
 
@@ -258,7 +241,6 @@ def generate_ad_content(
         prompt += "\n- 각 버전마다 영어 번역도 바로 이어서 작성"
 
     if channel == "instagram":
-        # prompt += "\n- 본문에 이모지 활용하여 시각적으로 매력적으로 작성"
         prompt += f"\n- 끝에는 5~8개의 해시태그 포함: {', '.join(hashtags)}"
 
     elif channel == "community":
@@ -274,38 +256,8 @@ def generate_ad_content(
         """
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.9,
     )
     return response.choices[0].message.content.strip()
-
-# ==============================
-#  API 요청 스키마
-# ==============================
-class AdRequest(BaseModel):
-    product: str
-    tone: str = "친근한"
-    channel: str = "instagram"
-    target_audience: str | None = None
-    translate_en: bool = False
-    location: str | None = None
-
-# ==============================
-#  엔드포인트
-# ==============================
-@app.post("/generate")
-def generate_ad(request: AdRequest):
-    result = generate_ad_content(
-        product_desc=request.product,
-        tone=request.tone,
-        channel=request.channel,
-        target_audience=request.target_audience,
-        translate_en=request.translate_en,
-        location=request.location
-    )
-    return {"result": result}
-
-@app.get("/test")
-def test():
-    return {"status": "ok"}

@@ -1,12 +1,16 @@
 # scripts/seed_default_models.py
 import os, sys
-# 프로젝트 루트 경로를 sys.path에 추가 (다른 폴더의 .py 파일을 import하기 위해)
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 프로젝트 루트 경로를 sys.path에 추가
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+
 import base64
 from sqlmodel import Session, select
 from src.backend.database import engine
 from src.backend.models import UserModel, User
-
+# 비밀번호 해싱을 위해 추가
+from src.backend.auth_utils import Hasher  
 
 """
 데이터베이스의 'usermodel' 테이블에 모든 사용자가 공통으로 사용할
@@ -16,12 +20,11 @@ from src.backend.models import UserModel, User
 실행 명령어: python scripts/seed_default_models.py
 """
 
-
 ##################################################
 # 설정 및 상수
 ##################################################
-# 디폴트 모델 이미지 파일이 저장된 루트 경로
-ROOT = "./src/backend/user_models/"
+# [수정됨] 실제 이미지가 있는 assets 폴더로 절대 경로 지정
+ROOT = os.path.join(BASE_DIR, "assets")
 
 # DB에 추가할 기본 모델 정보 목록
 DEFAULT_MODELS = [
@@ -33,7 +36,6 @@ DEFAULT_MODELS = [
     {"filename": "female_50.png", "alias": "50대 여성"},
 ]
 
-
 ##################################################
 # 유틸리티 함수
 ##################################################
@@ -42,23 +44,17 @@ def encode_image_to_base64(file_path: str) -> str:
     이미지 파일을 읽어서 Base64 데이터 URL로 변환함.
     """
     try:
-        # 'rb'는 바이너리 읽기 모드
         with open(file_path, "rb") as image_file:
             image_bytes = image_file.read()
         
-        # 파일 확장자로 MIME 타입 결정 (예: 'image/png')
         mimetype = f"image/{file_path.split('.')[-1]}"
-        
-        # Base64로 인코딩하고 utf-8 문자열로 변환
         base64_encoded = base64.b64encode(image_bytes).decode('utf-8')
         
-        # Data URL 형식으로 반환
         return f"data:{mimetype};base64,{base64_encoded}"
 
     except FileNotFoundError:
         print(f"오류: {file_path} 파일을 찾을 수 없음")
         return None
-
 
 ##################################################
 # 메인 시딩(Seeding) 로직
@@ -69,12 +65,19 @@ def seed_data():
     """
     print("Start Seeding")
     with Session(engine) as session:
-        # 기본 모델의 소유자가 될 admin 계정(ID=1)이 있는지 확인
+        # [수정됨] admin 계정(ID=1)이 있는지 확인하고, 없으면 생성
         admin_user = session.get(User, 1)
         if not admin_user:
-            print("오류: ID가 1인 admin 계정이 없습니다.")
-            return
-
+            print("알림: ID가 1인 admin 계정이 없어 새로 생성합니다.")
+            admin_user = User(
+                username="admin",
+                hashed_password=Hasher.get_password_hash("admin") # 비밀번호: admin
+            )
+            session.add(admin_user)
+            session.commit()
+            session.refresh(admin_user)
+            print(f"생성 완료: ID={admin_user.id}, Username={admin_user.username}")
+        
         # 기본 모델 목록을 순회하며 DB에 추가
         for model_info in DEFAULT_MODELS:
             # 같은 별명(alias)을 가진 모델이 이미 DB에 있는지 중복 확인
@@ -92,7 +95,7 @@ def seed_data():
                         file_path=image_data_url,
                         alias=model_info["alias"],
                         is_deletable=False,
-                        owner_id=1  # admin 계정(ID=1)의 소유로 지정
+                        owner_id=admin_user.id  # admin 계정 소유로 지정
                     )
                     session.add(new_model)
     
@@ -100,7 +103,6 @@ def seed_data():
         session.commit()
     print("Complete Seeding")
 
-    
 ##################################################
 # 스크립트 실행
 ##################################################
