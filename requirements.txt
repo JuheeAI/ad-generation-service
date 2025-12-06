@@ -18,25 +18,25 @@ python-jose[cryptography]
 streamlit
 streamlit-copy-to-clipboard
 
-# --- AI & Image Processing ---
-# 의존성 확인을 위해 명시
-torch
-torchvision
-torchaudio
+# --- AI & Image Processing (Core) ---
+torch>=2.4.0
+torchvision>=0.19.0
 
-# Diffusers & HuggingFace
-diffusers
+git+https://github.com/huggingface/diffusers.git
+
+numpy<2.0
+
 transformers
 accelerate
+bitsandbytes
 safetensors
 huggingface_hub
 
-# Image Utils
-opencv-python-headless
+# --- Image Utils ---
 Pillow
 rembg
+opencv-python-headless
 onnxruntime-gpu
-numpy
 
 # --- LLM (OpenAI) ---
 openai
