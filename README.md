@@ -1,3 +1,7 @@
+```text
+이 문서는 이미지 모델을 FLUX.2로 적용한 후 수정됐습니다. 보고서 링크의 내용과 일부 다를 수 있습니다.
+```
+
 ### 보고서 (발표 자료)
 - [소상공인을 위한 온라인 콘텐츠 제작 서비스](https://drive.google.com/file/d/1x69WY5Waohpitvix3U2cmRzTAvKAihuU/view?usp=sharing)
 
