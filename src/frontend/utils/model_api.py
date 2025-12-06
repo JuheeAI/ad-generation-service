@@ -3,8 +3,8 @@ import streamlit as st
 import os
 from typing import Dict, Any, Optional, Tuple
 
-os.environ["NO_PROXY"] = "localhost,127.0.0.1"
-BACKEND_URL = "http://127.0.0.1:9000"
+BACKEND_URL = os.getenv("API_BASE", "http://127.0.0.1:9000")
+os.environ["NO_PROXY"] = "*"
 
 def generate_text(
     product: str,
