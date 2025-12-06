@@ -151,7 +151,7 @@ class ImageGenerationPipeline:
                 
                 self.logger.info("✨ Generating Final Image...")
                 final_image = pipe(
-                    prompt_embeds=remote_text_encoder(prompt),
+                    prompt_embeds=remote_text_encoder(prompt_text),
                     pooled_prompt_embeds=None,
                     image=collage_image if collage_image else None,
                     strength=0.85 if collage_image else None, 
@@ -180,8 +180,7 @@ if __name__ == "__main__":
     PRODUCT_IMG_PATH = "product.png"
 
     test_inputs = {
-        "prompt": "모델이 제품 사진의 신발을 신고 점프하는 모습",
-        "product_image": image_to_b64(PRODUCT_IMG_PATH),
+        "prompt": "Model wearing the shoes from the product image, jumping in the air, energetic vibe, high resolution.",        "product_image": image_to_b64(PRODUCT_IMG_PATH),
         "model_image": image_to_b64(MODEL_IMG_PATH),
         "params": {
             "size": "1024x1024",
