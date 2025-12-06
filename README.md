@@ -24,12 +24,12 @@
 * 마케팅 전담 인력 없이 혼자서 모든 것을 해결해야 하는 1인 사업가
 
 ### 핵심 기능
-* 선택지 기반 단순 입력 구조로 사용 편의성 극대화
-* 인스타그램, 네이버 플레이스, 지역 커뮤니티별 문체와 포맷 자동 반영
-* 사람, 동물 등 다양한 모델을 사용해 특별한 광고 콘텐츠 제작 
+* 초고품질 이미지 생성: 최신 FLUX.2 모델을 도입하여 실제 사진과 구분이 어려운 수준의 광고 이미지 제작
+* 원클릭 광고 카피: GPT-4o 기반으로 인스타그램, 블로그, 당근마켓 등 채널별 맞춤 홍보 문구 자동 생성
+* 직관적인 UI: 복잡한 프롬프트 입력 없이 버튼 클릭만으로 완성되는 사용자 경험
 
 ### 기대 효과
-사용자는 더 이상 광고 문구를 고민하는 데 시간을 낭비하지 않고, 클릭 몇 번만으로 광고를 만들 수 있습니다. 이를 통해 마케팅 비용과 노력을 줄여 핵심 비즈니스에 더 집중할 수 있고 누구나 기술의 도움을 받아 자신의 가게를 효과적으로 알릴 수 있습니다.
+사용자는 더 이상 광고 문구를 고민하는 데 시간을 낭비하지 않고, 클릭 몇 번만으로 광고를 만들 수 있습니다. 이를 통해 마케팅 비용과 노력을 줄여 핵심 비즈니스에 더 집중할 수 있습니다.
 
 ### 기술 스택
 
@@ -50,8 +50,8 @@
 <br>
 <br>
 
-# ⚙️ 설치 및 실행 방법
-이 프로젝트는 Backend, Frontend, Model Server 총 3개의 서버를 실행해야 정상적으로 동작합니다.
+# ⚙️ 설치 및 실행 방법 (Docker 환경)
+이 프로젝트는 RTX A6000 (48GB VRAM) 이상의 GPU 환경에 최적화되어 있으며, 단일 스크립트로 백엔드와 프론트엔드를 동시에 실행합니다. Docker를 통해 배포 환경을 표준화했습니다. 복잡한 라이브러리 설치 과정 없이 도커만 있으면 즉시 실행 가능합니다.
 
 ### 1. 사전 준비
 1. **리포지토리 복제(Clone)**
@@ -60,84 +60,76 @@
     cd ad-generation-service
     ```
 
-2. **가상환경 생성 및 활성화**
+2. **환경 변수 설정(.env) 프로젝트 루트 경로에 `.env` 파일을 생성하고 키를 입력합니다.
     ```bash
-    python -m venv venv
-    source venv/bin/activate
+    # .env 파일 생성
+    vi .env
     ```
-
-3. **필수 라이브러리 설치**
+    `.env` 내용 예시
     ```bash
-    pip install -r requirements.txt
+    OPENAI_API_KEY=sk-proj-...
+    HF_TOKEN=hf_...
     ```
+3. **Docker 실행**
+    Docker Compose를 사용해 Backend(FastAPI)와 Frontend(Streamlit) 컨테이너를 동시에 빌드하고 실행합니다.
+    1. 서비스 시작(Build & Run)
+       ```bash
+       docker compose up -d --build
+       ```
+       * `-d`: 백그라운드 실행
+       * `--build`: 코드 변경 사항이 있을 경우 이미지를 새로 빌드
+    2. 실행 상태 확인
+       ```bash
+       docker compose ps
+       ```
+       * `ad-project-backend`와 `ad-project-frontend` 상태가 `Up`이면 정상입니다.
+    3. 로그 확인 (실시간)
+       ```bash
+       # 전체 로그 확인
+       docker compose logs -f
 
-4. **환경 변수 (.env)**
-    환경 변수는 각 서버 루트에 존재합니다.
+       # 특정 서비스 로그만 확인
+       docker compose logs -f backend
+       docker compose logs -f frontend
+       ```
+4. **서비스 접속**
+    브라우저를 열고 아래 주소로 접속합니다.
+    * Frontend (서비스 화면): `http://localhost:8501`
+    * Backend (API 문서): `http://localhost:9000/docs`
+
+5. **서비스 종료**
+    사용을 마친 후 컨테이너를 안전하게 종료합니다.
     ```bash
-    OPENAI_API_KEY=YourOpenAIKey
-    HF_TOKEN=YourHuggingfaceKey
+    docker compose down
     ```
-
-### 2. 서버 실행
-각 서버는 **별도의 터미널 창**을 열어서 실행해야 합니다.
-
-1.  **Backend 서버 실행 (FastAPI)**
-    * **실행 위치:** `src/backend/`
-    * **명령어:**
-        ```bash
-        cd src/backend
-        uvicorn main:app --reload
-        ```
-
-2.  **Frontend 서버 실행 (Streamlit)**
-    * **실행 위치:** `src/frontend/`
-    * **명령어:**
-        ```bash
-        cd src/frontend
-        streamlit run app.py
-        ```
-        
-3.  **Model 서버 실행 (API Server)**
-    * **실행 위치:** `src/model/imagemodel/`
-    * **명령어:**
-        ```bash
-        cd src/model/imagemodel
-        python api_server.py
-        ```
-
-4.  **Text Model 서버 실행 (FastAPI)**
-    * **실행 위치:** `src/model/textmodel/`
-    * **명령어:**
-        ```bash
-        cd src/model/textmodel
-        uvicorn text_generation:app --reload
-        ```
 
 <br>
 <br>
 
 # 📂 프로젝트 구조
-Frontend, Backend, AI Model의 역할을 명확히 분리해 구성되어 있습니다. 각 디렉토리의 주요 역할은 다음과 같습니다.
-
+기존의 복잡한 멀티 서버 구조를 통합해 관리 효율성을 높였습니다.
 ```bash
 ad-generation-service/
-├── README.md                # 프로젝트 설명 문서
-├── database.db              # SQLite 데이터베이스 파일
-├── image/                   # README에 사용될 이미지/GIF 저장 폴더
-├── requirements.txt         # 프로젝트 의존성 라이브러리 목록
-├── scripts/                 # DB 초기화 등 보조 스크립트 폴더
-└── src/                     # 핵심 소스 코드 폴더
-    ├── backend/             # FastAPI 백엔드 서버
-    ├── frontend/            # Streamlit 프론트엔드 서버
-    ├── model/               # AI 모델 및 모델 API 서버
-    └── serving/             # 모델 서빙 관련 코드
+├── start.sh                 # 전체 서비스(FE+BE) 원클릭 실행 스크립트
+├── docker-compose.yml       # 도커 배포 설정 파일
+├── Dockerfile               # 도커 이미지 빌드 설정
+├── requirements.txt         # 통합 의존성 패키지 목록
+├── .env                     # 환경 변수 (API Key 등)
+└── src/
+    ├── backend/             # FastAPI 서버 + AI 모델 엔진 (FLUX.1)
+    │   ├── main.py          # 서버 진입점
+    │   ├── services/        # 이미지/텍스트 생성 로직
+    │   └── routers/         # API 엔드포인트
+    └── frontend/            # Streamlit UI
+        ├── app.py           # 앱 진입점
+        └── pages/           # 화면별 페이지 코드
 ```
 
 <br>
 <br>
 
 # 💡 데모 사이트
-아래 링크와 테스트 계정으로 접속해 프로젝트의 주요 기능을 직접 체험해 볼 수 있습니다.
+GCP 환경에서 배포된 데모 페이지입니다. (현재는 사용 불가능합니다.)
 
 🔗 **Link:** **[http://34.123.118.58:8501/](http://34.123.118.58:8501/)**
 
@@ -160,18 +152,12 @@ ad-generation-service/
 라이선스 규정을 준수하기 위해 각 모델의 사용 정책을 확인했습니다.
 
 ### 텍스트 생성 모델
-* OpenAI GPT-4.1-mini: OpenAI API 전용 (상업적 사용 가능, API 기반)
+* OpenAI GPT-4.0-mini
+  * 빠르고 효율적인 텍스트 생성 모델로 광고 카피 및 마케팅 문구 작성에 사용됩니다.
+  * 라이선스: OpenAI API 정책에 따름.
 
 ### 이미지 생성 모델
-* stabilityai/stable-diffusion-xl-base-1.0: OpenRAIL++ (상업적 사용 가능, 모델 사용 시 제한된 사용 정책 준수 필요)
-* stabilityai/stable-diffusion-xl-refiner-1.0: OpenRAIL++ (상업적 사용 가능, 모델 사용 시 제한된 사용 정책 준수 필요)
-* madebyollin/sdxl-vae-fp16-fix: OpenRAIL++ (상업적 사용 가능, 모델 사용 시 제한된 사용 정책 준수 필요)
-
-### 보조 및 제어 모델 (Supporting & Control Models)
-* diffusers/controlnet-depth-sdxl-1.0: OpenRAIL++ (상업적 사용 가능, 모델 사용 시 제한된 사용 정책 준수 필요)
-* diffusers/controlnet-canny-sdxl-1.0: OpenRAIL++ (상업적 사용 가능, 모델 사용 시 제한된 사용 정책 준수 필요)
-* destitech/controlnet-inpaint-dreamer-sdxl: Apache-2.0 (상업적 사용 가능, 라이선스 및 저작권 고지 필요)
-* h94/IP-Adapter: Apache-2.0 (상업적 사용 가능, 라이선스 및 저작권 고지 필요)
-* laion/CLIP-ViT-H-14-laion2B-s32B-b79K: OpenRAIL (IP-Adapter의 이미지 인코더로 사용)
-* IDEA-Research/grounding-dino-tiny: Apache-2.0 (객체 탐지를 위한 모델)
-* facebook/sam-vit-huge: Apache-2.0 (이미지 분할을 위한 Segment Anything Model)
+* FLUX.2 [dev]
+  * 최신 Diffusion Transformer 기반의 고성능 이미지 생성 모델. 텍스트 이해도가 매우 높고 실사 표현이 뛰어납니다.
+  * 4-bit Quantization (bitsandbytes) 적용, RTX A6000 네이티브 최적화 (CUDA).
+  * 라이선스: FLUX.2-dev Non-Commercial License (비상업적 용도, 연구 및 테스트용)
